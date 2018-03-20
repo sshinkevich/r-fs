@@ -161,7 +161,9 @@ cat("NB: Number of unique accounts vs. users:", length(unique(df$BK_KONTO_NR)), 
 #Remove columns
 #==========================================
 dft <- df
-vName = c("SK_KUNDE_SCD_ID","ETTERNAVN", "FORNAVN", "ADRESSELINJE_1", "POSTSTED_NAVN", "BK_POSTSTED_KODE", "FODSELS_DATO")
+vName = c("SK_KUNDE_SCD_ID","ETTERNAVN", "FORNAVN", "ADRESSELINJE_1", "POSTSTED_NAVN", "BK_POSTSTED_KODE"
+          #, "FODSELS_DATO"
+          )
 for (t in vName) {
   dft[[t]] <- NULL
 }
