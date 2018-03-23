@@ -40,13 +40,17 @@ cat("%% of OPEN vs. CLOSED accounts: ", sum(df$STATUS=="OPEN")/length(df$STATUS)
 
 #Check NA values in items
 #==========================================
-all.nm <- names(df)
-for (t in all.nm) {
-  tmp <- sum(is.na(df[[t]]))
-  if (tmp>0) cat("Number of NA in", t, ": ", tmp, "\n")
-  #if (tmp>0 & is.numeric(df[[t]])) 
+if (anyNA(df)) {
+  for (t in colnames(df)) {
+    tmp <- sum(is.na(df[[t]]))
+    if (tmp>0) cat("Number of NA in", t, ": ", tmp, "\n")
+    #if (tmp>0 & is.numeric(df[[t]]))
+  }
+} else {
+  cat("Is there any NA?:", anyNA(df), "\n")
 }
 #==========================================
+
 
 #Replace NA values with ""
 #==========================================
@@ -98,14 +102,17 @@ sindex <- df$ALDER >= 150 | trimws(df$FORNAVN) == ""
 #sum(xor(df$ALDER >= 150, trimws(df$FORNAVN) == "")) #ALDER is better feature then FORNAVN
 cat("Number of companies (ALDER):", sum(sindex), "\n")
 
-#Setting flag as IsFirm
-df$IS_FIRM <- as.integer(sindex)
+#dft <- df[sindex, ]
+# #Setting flag as IsFirm
+# df$IS_FIRM <- as.integer(sindex)
 
 tmp <- paste(df$ETTERNAVN, df$FORNAVN, df$ADRESSELINJE_1)
-#sindex <- grepl("^AS | AS$", tmp, ignore.case = TRUE) && !df$IS_FIRM
-sindex <- grepl(" AS$|^AS ", tmp, ignore.case = TRUE) & df$IS_FIRM == 0
+#sindex <- grepl("^AS | AS$", tmp, ignore.case = TRUE)
+sindex <- grepl(" AS$|^AS ", tmp, ignore.case = TRUE)
 cat("Number of AS in ADRESSE:", sum(sindex))
 #dft <- subset(df, sindex)
+sindex <- grepl(" AS$|^AS ", tmp, ignore.case = TRUE) | df$ALDER >= 150 | trimws(df$FORNAVN) == ""
+cat("Total number of IS_FIRM:", sum(sindex))
 
 #Setting flag as IsFirm
 df$IS_FIRM <- as.integer(sindex)
