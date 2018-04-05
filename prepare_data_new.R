@@ -36,10 +36,12 @@ if (anyNA(df)) {
 #Convert to Char
 #==========================================
 ConToChar <- function(x, vName = c(#"BK_KONTO_NR","KUNDE_NR", 
-  "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE", "IS_OPEN", "IS_FIRM", "IS_DEAD") 
+  "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE", "IS_OPEN", "IS_FIRM", "IS_DEAD", "BK_POSTSTED_KODE") 
   ) {
   for (t in vName) {
-    x[,t] <- as.character(x[,t])
+    if (t %in% names(x)) {
+      x[, t] <- as.character(x[,t])
+    }
   }
   return(x)
 }
@@ -53,7 +55,9 @@ ConToFactor <- function(x, vName = c("STATUS","BK_KJONN_KODE", "BK_LAND_KODE", "
                                      "IS_OPEN", "IS_FIRM", "IS_DEAD"
 ) ) {
   for (t in vName) {
-    x[[t]] <- as.factor(x[[t]])
+    if (t %in% names(x)) {
+      x[[t]] <- as.factor(x[[t]])
+    }
   }
   return(x)
 }
@@ -69,6 +73,8 @@ flname <- "dataframe_full.rds"
 saveRDS(df, file=flname)
 #=========================================
 
+#dft <- df[, c("KUNDE_NR", "BK_KONTO_NR", "SUM_JUNI_2015", "SUM_JUNI_2016", "SUM_JUNI_2017", "STATUS", "IS_OPEN", 
+#              "ANTALL_JUNI_2015", "ANTALL_JUNI_2016", "ANTALL_JUNI_2017", "IS_FIRM")]
 
 
 
@@ -175,9 +181,17 @@ df <- dft
 #==========================================
 
 
+
+############################################
+#ANALYSYS
+############################################
+
 #Choose feature-columns
 feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_START_DATO", "NUMBER_BK_KONTO_NR", aName, sName)
-#feature_chr <- c("BK_KJONN_KODE", "BK_SIVILSTAND_KODE", "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE", "IS_FIRM")
+feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_START_DATO", "NUMBER_BK_KONTO_NR", aName, sName,"ANTALL_INTERCEPT", "ANTALL_SLOPE")
+feature_num <- c("ALDER", "DAYS_START_DATO", "NUMBER_BK_KONTO_NR", "ANTALL_12", "ANTALL_INTERCEPT", "ANTALL_SLOPE")
+
+feature_chr <- c("BK_KJONN_KODE", "BK_SIVILSTAND_KODE", "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE", "IS_FIRM")
 feature_chr <- c("BK_KJONN_KODE", "BK_SIVILSTAND_KODE", "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE")
 feature_nm <- c(feature_num, feature_chr)
 feature_nm <- c("DAYS_START_DATO", "ALDER", "ANTALL_12", "ANTALL_1", "SUM_12", "BK_ANSVARSTED_KODE")
@@ -218,7 +232,7 @@ param <- list(  objective           = "binary:logistic",
                 eta                 = 0.1, #learning rate Default = 0.3
                 max_depth           = 30, #Default = 6
                 nthread             = 4, #number of cpu threads
-                subsample           = 0.7, #Default = 1 in otrder to avoid overfitting
+#                subsample           = 0.7, #Default = 1 in otrder to avoid overfitting
                 #colsample_bytree    = 0.8,
                 eval_metric         = "auc"
                 #min_child_weight    = 6,
@@ -229,7 +243,7 @@ param <- list(  objective           = "binary:logistic",
 start_time <- Sys.time()
 myModel <- xgb.train( params              = param, 
                       data                = dtrain, 
-                      nrounds             = 500, 
+                      nrounds             = 900, 
                       verbose             = 1, 
                       early_stopping_rounds    = 10,
                       watchlist           = watchlist,
@@ -242,7 +256,7 @@ label = getinfo(dtest, "label")
 pred.prob <- predict(myModel, dtest)
 pred.label <- as.integer(pred.prob > 0.5)
 confusionMatrix(table(pred.label, label))
-#FormConfMatrix(pred.label, label)
+FormConfMatrix(pred.label, label)
 
 #err <- as.numeric(sum(as.integer(pred.prob > 0.5) != label))/length(label)
 #print(paste("test-error=", err))
