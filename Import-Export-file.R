@@ -21,6 +21,7 @@ cat("%% of OPEN vs. CLOSED accounts: ", sum(df$STATUS=="OPEN")/length(df$STATUS)
 #Setting flag as IS_OPEN
 sindex <- df$STATUS=="OPEN"
 df$IS_OPEN <- as.integer(sindex)
+#df$IS_OPEN <- ifelse(df$STATUS=="OPEN",1,0)
 #==========================================
 
 #Check NA values in items
@@ -135,7 +136,7 @@ df <- dft
 #Convert to Char
 #==========================================
 ConToChar <- function(x, vName = c(#"BK_KONTO_NR","KUNDE_NR", 
-  "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE", "IS_OPEN", "IS_FIRM", "IS_DEAD") 
+  "BK_ANSVARSTED_KODE", "BK_POSTSTED_KODE", "BK_GEOGRAFI_KODE", "IS_OPEN", "IS_FIRM", "IS_DEAD") 
 ) {
   for (t in vName) {
     x[[t]] <- as.character(x[[t]])
@@ -191,8 +192,8 @@ head(dft)
 #===========================================================
 dft <- df
 #Copy for the last 12 month for OPEN accounts
-#tDate <- seq.Date(as.Date("01/01/2017", format='%d/%m/%Y'), by = "month", length.out = 12)
-tDate <- seq.Date(as.Date("01/01/2016", format='%d/%m/%Y'), by = "month", length.out = 12)#We use 2016 year to be sure in behaviour of open accounts
+tDate <- seq.Date(as.Date("01/01/2017", format='%d/%m/%Y'), by = "month", length.out = 12)
+#tDate <- seq.Date(as.Date("01/01/2016", format='%d/%m/%Y'), by = "month", length.out = 12)#We use 2016 year to be sure in behaviour of open accounts
 cName <- FormColName(tDate, pref = "")
 cName1 <- paste0("ANTALL_", cName)
 cName <- paste0("SUM_", cName)

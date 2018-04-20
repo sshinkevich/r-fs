@@ -185,32 +185,55 @@ df <- dft
 ############################################
 #ANALYSYS
 ############################################
+## Data Slicing
+#==========================================
+set.seed(123)
+#sindex <- createDataPartition(y = df$STATUS, p= 0.7, list = FALSE)
+sindex <- createDataPartition(y = df$IS_OPEN, p= 0.7, list = FALSE)
+df.train <- df[sindex,]
+df.test <- df[-sindex,]
+#==========================================
+#==========================================
+
 
 #Choose feature-columns
-feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_START_DATO", "NUMBER_BK_KONTO_NR", aName, sName)
-feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_START_DATO", "NUMBER_BK_KONTO_NR", aName, sName,"ANTALL_INTERCEPT", "ANTALL_SLOPE")
-feature_num <- c("ALDER", "DAYS_START_DATO", "NUMBER_BK_KONTO_NR", "ANTALL_12", "ANTALL_INTERCEPT", "ANTALL_SLOPE")
+#feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_START_DATO", "NUMBER_BK_KONTO_NR", aName, sName)
+#feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_START_DATO", "NUMBER_BK_KONTO_NR", aName, sName,"ANTALL_INTERCEPT", "ANTALL_SLOPE")
+#feature_num <- c("ALDER", "DAYS_START_DATO", "NUMBER_BK_KONTO_NR", "ANTALL_12", "ANTALL_INTERCEPT", "ANTALL_SLOPE")
+#feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_START_DATO", aName, sName,"ANTALL_INTERCEPT", "ANTALL_SLOPE")
+feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_BEING_CUSTOMER", aName, sName,"ANTALL_INTERCEPT", "ANTALL_SLOPE")
 
-feature_chr <- c("BK_KJONN_KODE", "BK_SIVILSTAND_KODE", "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE", "IS_FIRM")
+#feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_START_DATO", aName[aName!="ANTALL_12"], sName[aName!="ANTALL_12"],"ANTALL_INTERCEPT", "ANTALL_SLOPE")
+
+#feature_chr <- c("BK_KJONN_KODE", "BK_SIVILSTAND_KODE", "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE", "IS_FIRM")
 feature_chr <- c("BK_KJONN_KODE", "BK_SIVILSTAND_KODE", "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE")
 feature_nm <- c(feature_num, feature_chr)
-feature_nm <- c("DAYS_START_DATO", "ALDER", "ANTALL_12", "ANTALL_1", "SUM_12", "BK_ANSVARSTED_KODE")
+#feature_nm <- c("DAYS_START_DATO", "ALDER", "ANTALL_12", "ANTALL_1", "SUM_12", "BK_ANSVARSTED_KODE")
 label_nm <- "IS_OPEN"
 
 
 #dft <- df[c(feature_nm, label_nm)]
 #df <- dft
 
-## Data Slicing
-#==========================================
-set.seed(123)
-sindex <- createDataPartition(y = df$STATUS, p= 0.7, list = FALSE)
-df.train <- df[sindex,]
-df.test <- df[-sindex,]
-#==========================================
 
+
+#Choose features
 df.train <- df.train[c(feature_nm, label_nm)]
 df.test <- df.test[c(feature_nm, label_nm)]
+
+# Create model weights (they sum to one)
+#========================================================
+myWeights <- ifelse(df.train$IS_OPEN == "0",
+                    (1/(table(df.train$IS_OPEN)[1])) * 0.5,
+                    (1/(table(df.train$IS_OPEN)[2])) * 0.5
+)
+table(df.train$IS_OPEN)
+myWeights <- 1e+5*myWeights
+cat("Weights unique values:", unique(myWeights), "\n")
+sum(myWeights)
+sumwpos <- sum(myWeights * (df.train$IS_OPEN == "0"))
+sumwneg <- sum(myWeights * (df.train$IS_OPEN == "1"))
+#========================================================
 
 
 require(xgboost)
@@ -218,30 +241,34 @@ require(xgboost)
 #============================================
 dft <- df.train[feature_nm]
 tmp <- sapply(df.train[[label_nm]], function(x) as.numeric(levels(x))[x])
-dtrain <- xgb.DMatrix(data = data.matrix(dft), label = tmp)
+dtrain <- xgb.DMatrix(data = data.matrix(dft), label = tmp, weight = myWeights)
+#dtrain <- xgb.DMatrix(data = data.matrix(dft), label = tmp)
 
 dft <- df.test[feature_nm]
 tmp <- sapply(df.test[[label_nm]], function(x) as.numeric(levels(x))[x])
 dtest <- xgb.DMatrix(data = data.matrix(dft), label = tmp)
 
-watchlist <- list(train=dtrain, test=dtest)
+#watchlist <- list(train=dtrain, test=dtest)
+watchlist <- list(train=dtrain)
 
 # Training a XGBoost classifier
-param <- list(  objective           = "binary:logistic", 
+param <- list(  objective           = "binary:logistic", #"reg:linear", 
+                scale_pos_weight = sumwneg / sumwpos, 
                 booster             = "gbtree", #Default - gbtree
                 eta                 = 0.1, #learning rate Default = 0.3
                 max_depth           = 30, #Default = 6
                 nthread             = 4, #number of cpu threads
-#                subsample           = 0.7, #Default = 1 in otrder to avoid overfitting
-                #colsample_bytree    = 0.8,
-                eval_metric         = "auc"
+                subsample           = 0.7, #Default = 1 in otrder to avoid overfitting
+                colsample_bytree    = 0.8,
+                #seed = 48608,
+                eval_metric         = "auc", #"ndcg" #"map" #"error" #"logloss" 
                 #min_child_weight    = 6,
-                #alpha               = 4
-                # lambda = 1
+                reg_alpha            = 1, #Default = 0 #L1
+                reg_lambda           = 0.1  #Default = 1 #L2
 )
 
 start_time <- Sys.time()
-myModel <- xgb.train( params              = param, 
+myModel <- xgb.train( params              = param,
                       data                = dtrain, 
                       nrounds             = 900, 
                       verbose             = 1, 
@@ -256,7 +283,7 @@ label = getinfo(dtest, "label")
 pred.prob <- predict(myModel, dtest)
 pred.label <- as.integer(pred.prob > 0.5)
 confusionMatrix(table(pred.label, label))
-FormConfMatrix(pred.label, label)
+#FormConfMatrix(pred.label, label)
 
 #err <- as.numeric(sum(as.integer(pred.prob > 0.5) != label))/length(label)
 #print(paste("test-error=", err))
@@ -266,6 +293,29 @@ FormConfMatrix(pred.label, label)
 importance_matrix <- xgb.importance(feature_names = feature_nm, model = myModel)
 print(importance_matrix)
 xgb.plot.importance(importance_matrix = importance_matrix)
+
+
+###################################################################################
+# AUC calculations
+###################################################################################
+require("pROC")
+
+# auc <- roc(label, pred.label)
+# print(auc)
+print(roc(label, pred.prob))
+
+plot.roc(label, pred.prob, col = "blue", print.auc = TRUE, print.auc.col = "red", grid = TRUE)
+#plot.roc(label, pred.label, col = "blue", print.auc = TRUE, print.auc.col = "red", grid = TRUE)
+
+# plot(auc, ylim=c(0,1), print.thres=TRUE, main=paste('AUC:',round(auc$auc[[1]],2)))
+# abline(h=1,col='blue',lwd=2)
+# abline(h=0,col='red',lwd=2)
+
+# df_auc <- data.frame(tpr = auc$sensitivities, fpr = 1 - auc$specificities)
+# ggplot(aes(x = fpr,  y = tpr), data = df_auc) +
+#   geom_line(color = "blue", size = 1) +
+#   geom_abline(intercept = 0, slope = 1, color = "gray", size = 1) +
+#   theme_bw(base_size = 18)
 
 
 ####################################################################################
