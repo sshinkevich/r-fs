@@ -180,6 +180,9 @@ ggplot(data=df[df$IS_OPEN=="0", ], aes(DAYS_BEING_CUSTOMER)) +
 #=========================================
 flname <- "dataframe_lm.rds"
 flname <- "dataframe_full_lm.rds"
+flname <- "dataframe_full2_lm.rds"
+#flname <- "dataframe_full_abs_lm.rds"
+#flname <- "dataframe_full_tran.rds"
 saveRDS(df, file=flname)
 #=========================================
 
@@ -195,11 +198,14 @@ setwd("C:/Projects/FS-handelbanken/FS-R/Data/")
 #==========================================
 aName <- paste0("ANTALL_", 1:12)
 sName <- paste0("SUM_", 1:12)
+tName <- paste0("TRAN_", 1:12)
 #==========================================
 
 
 #Load file
 flname <- "dataframe_full_lm.rds"
+flname <- "dataframe_full2_lm.rds"
+flname <- "dataframe_full_tran.rds"
 #Import data.farme as RDS-file
 #==========================================
 df <- readRDS(flname)
@@ -209,6 +215,151 @@ df <- readRDS(flname)
 df <- subset(df, IS_DEAD=="0")
 df$IS_DEAD <- NULL
 #==========================================
+
+
+#Set transaction
+#==========================================
+#Transactions
+SetTRAN <- function(x, as_abs = TRUE) {
+  df <- x
+  aLength <- sum(grepl("^ANTALL_[[:digit:]]", colnames(df), ignore.case = TRUE))
+  tName <- paste0("TRAN_", 1:aLength)
+  for (i in 1:length(tName)) {
+    df[[tName[i]]] <- df[[sName[i]]]/df[[aName[i]]]
+  }
+  for (i in tName) {
+    df[is.na(df[,i]),i] <- 0
+  }
+  if (as_abs) {
+    df[ , tName] <- abs(df[ , tName])
+  }
+  return(df)
+}
+#==========================================
+df <- SetTRAN(df, as_abs = TRUE)
+
+# #Set ABS(TRAN)
+# #------------------------------------------
+# df[ ,tName] <- abs(df[ ,tName])
+# #------------------------------------------
+
+
+#Set SUM as ABS(SUM) and find DELTA - Linear Fit
+###################
+#===========================================
+#df[ ,sName] <- abs(df[ ,sName])
+df$DELTA_SUM <- df$SUM_12-df$SUM_11
+df$DELTA_ANTALL <- df$ANTALL_12-df$ANTALL_11
+df$DELTA_TRAN <- df$TRAN_12-df$TRAN_11
+
+
+MyFitWindow <- function(x, pref = "ANTALL_", FitWindow = 3) {
+  df <- x
+  aLength <- sum(grepl("^ANTALL_[[:digit:]]", colnames(df), ignore.case = TRUE))
+  aName <- paste0(pref, 1:aLength)
+  aFName <- c(paste0(pref, "WINDOW_INTERCEPT"), paste0(pref, "WINDOW_SLOPE"))
+  if (FitWindow==aLength) {
+    aFName <- c(paste0(pref, "INTERCEPT"), paste0(pref, "SLOPE"))
+  }
+  xFitWindow <- 0:(FitWindow-1)
+  FitWindow <- seq(from = aLength-FitWindow+1, length.out = FitWindow)
+  
+  dft <- df[ , aName[FitWindow]]
+  #dft <- abs(dft)
+  tmp <- 1:nrow(dft)
+  tmp <- t(sapply(tmp, function(y) coef(lm(unlist(dft[y, ]) ~ xFitWindow)) ))
+  for (i in 1:2) {
+    df[[aFName[i]]] <- tmp[, i]
+  }
+  return(df)
+}
+
+  # aName <- paste0("ANTALL_", 1:aLength)
+  # sName <- paste0("SUM_", 1:aLength)
+  # tName <- paste0("TRAN_", 1:aLength)
+  # #New names of INTERCEPT and SLOPE
+  # aFName <- c("ANTALL_WINDOW_INTERCEPT", "ANTALL_WINDOW_SLOPE")
+  # sFName <- c("SUM_WINDOW_INTERCEPT", "SUM_WINDOW_SLOPE")
+  # tFName <- c("TRAN_WINDOW_INTERCEPT", "TRAN_WINDOW_SLOPE")
+  # if (FitWindow==aLength) {
+  #   aFName <- c("ANTALL_INTERCEPT", "ANTALL_SLOPE")
+  #   sFName <- c("SUM_INTERCEPT", "SUM_SLOPE")
+  #   tFName <- c("TRAN_INTERCEPT", "TRAN_SLOPE")
+  # }
+  # 
+  # xFitWindow <- 0:(FitWindow-1)
+  # FitWindow <- seq(from = aLength-FitWindow+1, length.out = FitWindow)
+  # 
+  # #For ANTALL
+  # dft <- df[ , aName[FitWindow]] #For Fit Window
+  # tmp <- 1:nrow(dft)
+  # tmp <- t(sapply(tmp, function(y) coef(lm(unlist(dft[y, ]) ~ xFitWindow)) ))
+  # 
+  # # df$ANTALL_WINDOW_INTERCEPT <- tmp[, 1]
+  # # df$ANTALL_WINDOW_SLOPE <- tmp[, 2]
+  # for (i in 1:2) {
+  #   df[[aFName[i]]] <- tmp[, i]
+  # }
+  # 
+  # #For SUM
+  # dft <- df[ , sName[FitWindow]] #For Fit Window
+  # tmp <- 1:nrow(dft)
+  # tmp <- t(sapply(tmp, function(y) coef(lm(unlist(dft[y, ]) ~ xFitWindow)) ))
+  # # df$SUM_WINDOW_INTERCEPT <- tmp[, 1]
+  # # df$SUM_WINDOW_SLOPE <- tmp[, 2]
+  # for (i in 1:2) {
+  #   df[[sFName[i]]] <- tmp[, i]
+  # }
+  # 
+  # #For TRANSACTION
+  # if ("TRAN_1" %in% names(df)) {
+  #   #dft <- df[ , tName[FitWindow]] #For Fit Window
+  #   dft <- abs(df[ , tName[FitWindow]])
+  #   tmp <- 1:nrow(dft)
+  #   tmp <- t(sapply(tmp, function(y) coef(lm(unlist(dft[y, ]) ~ xFitWindow)) ))
+  #   for (i in 1:2) {
+  #     df[[tFName[i]]] <- tmp[, i]
+  #   }
+  # }
+#   return(df)
+# }
+
+# FitWindow <- 3
+# FitWindow <- seq(from = length(aName)-FitWindow+1, length.out = FitWindow)
+# dft <- df[ , aName[FitWindow]] #For Fit Window
+# tmp <- 1:nrow(dft)
+# tmp <- t(sapply(tmp, function(y) coef(lm(unlist(dft[y, ]) ~ FitWindow)) ))
+# 
+# #dim(tmp)
+# summary(tmp)
+# 
+# df$ANTALL_WINDOW_INTERCEPT <- tmp[, 1]
+# df$ANTALL_WINDOW_SLOPE <- tmp[, 2]
+
+start_time <- Sys.time()
+df <- MyFitWindow(df, pref= "ANTALL_", FitWindow = 12)
+df <- MyFitWindow(df, pref= "SUM_", FitWindow = 12)
+df <- MyFitWindow(df, pref= "TRAN_", FitWindow = 12)
+end_time <- Sys.time()
+cat("Calculation time of Linear Fit:", format(end_time-start_time), "\n")
+
+
+start_time <- Sys.time()
+df <- MyFitWindow(df, pref= "ANTALL_", FitWindow = 3)
+df <- MyFitWindow(df, pref= "SUM_", FitWindow = 3)
+df <- MyFitWindow(df, pref= "TRAN_", FitWindow = 3)
+end_time <- Sys.time()
+cat("Calculation time of Linear Fit for Window:", format(end_time-start_time), "\n")
+
+
+df.total <- df
+#df <- df.total
+
+
+
+#===========================================
+###################
+
 
 ## Data Slicing
 #==========================================
@@ -274,9 +425,9 @@ df$ALDER[df$ALDER==999] <- 0
 #feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_START_DATO", "NUMBER_BK_KONTO_NR", aName, sName,"ANTALL_INTERCEPT", "ANTALL_SLOPE")
 feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_BEING_CUSTOMER", aName, sName)
 
-
 #feature_chr <- c("BK_KJONN_KODE", "BK_SIVILSTAND_KODE", "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE", "IS_FIRM")
-feature_chr <- c("BK_KJONN_KODE", "BK_SIVILSTAND_KODE", "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE", "AS_FIRM")
+feature_chr <- c("BK_KJONN_KODE", "BK_SIVILSTAND_KODE", "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE", 
+                 "BK_POSTSTED_KODE", "AS_FIRM")
 #Convert to factor
 for (i in feature_chr) {
   df[[i]] <- as.factor(df[[i]])
@@ -329,7 +480,19 @@ for (i in 1:12) {
 }
 #tmp <- dft[sindex, c("SUM_12", "ANTALL_12")]
 
+
 df <- dft
+#Find DELTA
+###################
+#DELTA or Window FIT
+#===========================================
+df$DELTA_SUM <- df$SUM_12-df$SUM_11
+df$DELTA_ANTALL <- df$ANTALL_12-df$ANTALL_11
+df <- MyFitWindow(df, FitWindow = 3)
+df <- MyFitWindow(df, FitWindow = 12)
+#===========================================
+###################
+
 #Calculation of Linear Fit
 #################################################
 dft <- df[ , aName] #For all
@@ -340,15 +503,17 @@ dft <- df
 dft$ANTALL_INTERCEPT <- tmp[, 1]
 dft$ANTALL_SLOPE <- tmp[, 2]
 df <- dft
+#################################################
 
 #Choose train set as oversampling part of 70% and test set as 30% of unballanced
 df_mytrain <- df
 df <- df_mytrain
+
 df.train <- df_mytrain
 df.test <- df_gtest
 
 #df.train <- df_gtrain
-
+df <- df.train
 
 
 #Analyse of SUM-trend
@@ -364,6 +529,7 @@ if ("IS_DEAD" %in% names(df)) {
   df <- subset(df, IS_DEAD=="0")
   df$IS_DEAD <- NULL
 }
+
 
 
 # #Make new categorical value for accounts
@@ -472,6 +638,7 @@ grid.arrange(p2, p3, ncol=1)
 
 
 #Box plots
+#####################################################################
 #-------------------------------------------------
 tmp <- melt(dfw, id.vars = "IS_OPEN", measure.vars=aName)
 p1 <- ggplot(data = tmp, aes(x=variable, y=abs(value)+1, colour = IS_OPEN)) +
@@ -512,7 +679,7 @@ ggplot(data = tmp, aes(x=variable, y=value, colour = IS_OPEN)) +
   geom_boxplot(width =0.5, fill = "lightgray") +
   xlab("Month") + ylab("SUM") +
   stat_summary(aes(group=IS_OPEN), fun.y = mean, geom = 'line', size = 1.1) +
-  coord_cartesian(ylim = c(-3000,9000)) + theme_minimal()
+  coord_cartesian(ylim = c(-5000,8500)) + theme_minimal()
 
 # tmp0 <- 1-min(tmp$value)
 # ggplot(data = tmp, aes(x=variable, y=value+tmp0, colour = IS_OPEN)) +
@@ -543,6 +710,8 @@ for (i in tName) {
   dft[is.na(dft[,i]),i] <- 0
 }
 tmp <- melt(dft, id.vars = "IS_OPEN", measure.vars=tName)
+
+
 p1 <- ggplot(data = tmp, aes(x=variable, y=value, group = IS_OPEN, colour = IS_OPEN)) + 
   stat_summary(fun.y = mean, geom = "line", size = 1.1) + 
   stat_summary(fun.data = mean_se, geom = "errorbar", width = 0.2) +
@@ -567,6 +736,12 @@ ggplot(data = tmp, aes(x=variable, y=abs(value)+1, colour = IS_OPEN)) +
   xlab("Month") + ylab("ABS(Transaction)") +
   stat_summary(aes(group=IS_OPEN), fun.y = mean, geom = 'line', size = 1.1) +
   theme_minimal() + scale_y_log10()
+
+ggplot(data = tmp, aes(x=variable, y=value, colour = IS_OPEN)) +
+  geom_boxplot(width =0.5, fill = "lightgray") +
+  xlab("Month") + ylab("Transaction") +
+  stat_summary(aes(group=IS_OPEN), fun.y = mean, geom = 'line', size = 1.1) +
+  coord_cartesian(ylim = c(-150,250)) + theme_minimal()
 
 # ggplot(data = tmp, aes(x=variable, y=value, colour = IS_OPEN)) +
 #   geom_boxplot(width =0.5, fill = "lightgray") +
@@ -732,13 +907,252 @@ grid.arrange(p1, p2, ncol=1)
 #--------------------------------------------------------------------
 
 
+################################################################################
+#df <- df_gtest
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="ANTALL_SLOPE")
+#tmp$value <- scale(tmp$value)
+p1 <- ggplot(data = tmp, aes(x=variable, y=value, group = IS_OPEN, colour = IS_OPEN)) + 
+  geom_boxplot(outlier.shape = NA, fill = 'lightgray') +
+  stat_summary(fun.y = mean, geom = "point", size = 2) +
+  coord_cartesian(ylim = c(-2.5,3.5)) + theme_minimal() +
+  theme(plot.title = element_blank(), axis.title.x = element_blank(), axis.title.y = element_blank())
+p1
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="SUM_SLOPE")
+p2 <- ggplot(data = tmp, aes(x=variable, y=value, group = IS_OPEN, colour = IS_OPEN)) + 
+  geom_boxplot(outlier.shape = NA, fill = 'lightgray') +
+  stat_summary(fun.y = mean, geom = "point", size = 2) +
+  coord_cartesian(ylim = c(-900,1000)) + theme_minimal() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+p2
+print(aggregate(value ~ IS_OPEN, data = tmp, mean))
+
+#grid.arrange(p1, p2, ncol=1)
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="ANTALL_INTERCEPT")
+p3 <- ggplot(data = tmp, aes(x=variable, y=value, group = IS_OPEN, colour = IS_OPEN)) + 
+  geom_boxplot(outlier.shape = NA, fill = 'lightgray') +
+  stat_summary(fun.y = mean, geom = "point", size = 2) +
+  coord_cartesian(ylim = c(-80,150)) + theme_minimal() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+p3
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="SUM_INTERCEPT")
+p4 <- ggplot(data = tmp, aes(x=variable, y=value, group = IS_OPEN, colour = IS_OPEN)) + 
+  geom_boxplot(outlier.shape = NA, fill = 'lightgray') +
+  stat_summary(fun.y = mean, geom = "point", size = 2) +
+  coord_cartesian(ylim = c(-15000,27000)) + theme_minimal() +
+  theme(axis.title.x = element_blank(), axis.title.y = element_blank())
+p4
+
+#grid.arrange(p3, p4, ncol=1)
+
+grid.arrange(p1, p3, ncol=1)
+grid.arrange(p2, p4, ncol=1)
+
+#-----------------------------------------------------------------------------
+
+#Historgrams
+
+################################################################################
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="ANTALL_SLOPE")
+#tmp0 <- aggregate(value ~ IS_OPEN, data = tmp, mean)
+tmp0 <- merge(aggregate(value ~ IS_OPEN, data = tmp, mean), aggregate(value ~ IS_OPEN, data = tmp, median), by = "IS_OPEN")
+p1 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 0.5) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(-15, 15)) + 
+  #geom_density(alpha=.2) +
+  theme_minimal() + xlab(unique(tmp$variable))
+p1
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="ANTALL_INTERCEPT")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p2 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 4) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(-10, 160)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p2
+grid.arrange(p1, p2, ncol=1)
+
+
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="SUM_SLOPE")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p1 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 50) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(-1500, 1500)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p1
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="SUM_INTERCEPT")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p2 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 400) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(-10000, 15000)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p2
+grid.arrange(p1, p2, ncol=1)
+
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="TRAN_SLOPE")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p1 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 5) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(-150, 150)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p1
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="TRAN_INTERCEPT")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p2 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 50) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(-1000, 1000)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p2
+grid.arrange(p1, p2, ncol=1)
+
+#Window
+#----------------------------------------------------
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="ANTALL_WINDOW_SLOPE")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p1 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 0.5) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(-15, 15)) + 
+  #geom_density(alpha=.2) +
+  theme_minimal() + xlab(unique(tmp$variable))
+p1
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="ANTALL_WINDOW_INTERCEPT")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p2 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 3) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(-5, 150)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p2
+grid.arrange(p1, p2, ncol=1)
+
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="SUM_WINDOW_SLOPE")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p1 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 500) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(-15000, 15000)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p1
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="SUM_WINDOW_INTERCEPT")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p2 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 500) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(-12000, 12000)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p2
+grid.arrange(p1, p2, ncol=1)
+
+
+
+#SUM antall for 12-month
+#-----------------------
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="ANTALL_12")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p1 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 3) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(0, 150)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p1
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="SUM_12")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p2 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 500) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  coord_cartesian(xlim = c(0, 25000)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p2
+
+grid.arrange(p1, p2, ncol=1)
+
+
+#Transaction
+#----------------------------------------
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="TRAN_12")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p1 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 30) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  #coord_cartesian(xlim = c(0, 2700)) + 
+  coord_cartesian(xlim = c(-1000, 1000)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p1
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="TRAN_11")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p2 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 20) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  #coord_cartesian(xlim = c(0, 1500)) + 
+  coord_cartesian(xlim = c(-800, 800)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p2
+
+#DELTA
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="DELTA_ANTALL")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p1 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 5) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  #coord_cartesian(xlim = c(0, 2700)) + 
+  coord_cartesian(xlim = c(-100, 100)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p1
+
+tmp <- melt(df, id.vars = "IS_OPEN", measure.vars="DELTA_SUM")
+tmp0 <- merge(aggregate(value ~ IS_OPEN, tmp, mean), aggregate(value ~ IS_OPEN, tmp, median), by = "IS_OPEN")
+p2 <- ggplot(data = tmp, aes(x=value, group = IS_OPEN, colour = IS_OPEN, fill = IS_OPEN)) + 
+  geom_histogram(aes(y=..density..), position = "identity", alpha = 0.1, binwidth = 400) +
+  geom_vline(data = tmp0, aes(xintercept=value.x, colour = IS_OPEN), linetype="dashed", size=1) +
+  geom_vline(data = tmp0, aes(xintercept=value.y, colour = IS_OPEN), linetype="solid", size=0.5, alpha = 0.7) +
+  #coord_cartesian(xlim = c(0, 2700)) + 
+  coord_cartesian(xlim = c(-5000, 9000)) + 
+  theme_minimal() + xlab(unique(tmp$variable))
+p2
+
+###################################################################################################
+
 tmp <- melt(dft)
 ggplot(data = tmp, aes(x=variable, y=value)) + 
   stat_summary(aes(group=1),fun.y = mean, geom = "line", colour = 'blue', size = 1.1) + 
   stat_summary(fun.data = mean_se, geom = "errorbar", col = "darkgray", width = 0.2) +
   #stat_summary(fun.y = mean, geom = 'ribbon', fun.ymax = uci, fun.ymin = lci, alpha = 0.5, fill = 'lightblue') + 
   theme_minimal()
-
 
 
 # ggplot(data = tmp, aes(x=variable, y=log10(abs(value)))) + 

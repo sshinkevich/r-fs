@@ -163,6 +163,7 @@ df <- dft
 #==============================================
 aName <- paste0("ANTALL_", 1:12)
 sName <- paste0("SUM_", 1:12)
+tName <- paste0("TRAN_", 1:12)
 #==============================================
 
 #Remove columns
@@ -185,7 +186,7 @@ df <- dft
 ############################################
 #ANALYSYS
 ############################################
-## Data Slicing
+## Data Slicing for ML
 #==========================================
 set.seed(123)
 #sindex <- createDataPartition(y = df$STATUS, p= 0.7, list = FALSE)
@@ -202,11 +203,54 @@ df.test <- df[-sindex,]
 #feature_num <- c("ALDER", "DAYS_START_DATO", "NUMBER_BK_KONTO_NR", "ANTALL_12", "ANTALL_INTERCEPT", "ANTALL_SLOPE")
 #feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_START_DATO", aName, sName,"ANTALL_INTERCEPT", "ANTALL_SLOPE")
 feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_BEING_CUSTOMER", aName, sName,"ANTALL_INTERCEPT", "ANTALL_SLOPE")
+feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_BEING_CUSTOMER", aName, sName, "DELTA_SUM", "DELTA_ANTALL", "ANTALL_INTERCEPT", "ANTALL_SLOPE")
+#feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_BEING_CUSTOMER", "ANTALL_12", "SUM_12", "DELTA_SUM", "DELTA_ANTALL", "ANTALL_INTERCEPT", "ANTALL_SLOPE")
+feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_BEING_CUSTOMER", aName, sName,"ANTALL_INTERCEPT", "ANTALL_SLOPE", "ANTALL_WINDOW_INTERCEPT", "ANTALL_WINDOW_SLOPE", "SUM_WINDOW_INTERCEPT", "SUM_WINDOW_SLOPE")
+feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_BEING_CUSTOMER", "ANTALL_12", "SUM_12", "ANTALL_INTERCEPT", "ANTALL_SLOPE", "ANTALL_WINDOW_INTERCEPT", "ANTALL_WINDOW_SLOPE", "SUM_WINDOW_INTERCEPT", "SUM_WINDOW_SLOPE")
+
+feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_BEING_CUSTOMER", aName, sName, "DELTA_SUM", "DELTA_ANTALL", "ANTALL_INTERCEPT", "ANTALL_SLOPE", "SUM_INTERCEPT", "SUM_SLOPE", "ANTALL_WINDOW_INTERCEPT", "ANTALL_WINDOW_SLOPE", "SUM_WINDOW_INTERCEPT", "SUM_WINDOW_SLOPE")
+#All features
+feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_BEING_CUSTOMER", aName, sName, tName, "DELTA_SUM", "DELTA_ANTALL",
+                 "DELTA_TRAN", "ANTALL_INTERCEPT", "ANTALL_SLOPE", "TRAN_INTERCEPT", "TRAN_SLOPE",
+                 "SUM_INTERCEPT", "SUM_SLOPE", "ANTALL_WINDOW_INTERCEPT", "ANTALL_WINDOW_SLOPE", 
+                 "SUM_WINDOW_INTERCEPT", "SUM_WINDOW_SLOPE", "TRAN_WINDOW_INTERCEPT", "TRAN_WINDOW_SLOPE")
+#Without SUM but with TRAN
+feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_BEING_CUSTOMER", aName, tName, "DELTA_ANTALL",
+                 "DELTA_TRAN", "ANTALL_INTERCEPT", "ANTALL_SLOPE", "TRAN_INTERCEPT", "TRAN_SLOPE",
+                 "ANTALL_WINDOW_INTERCEPT", "ANTALL_WINDOW_SLOPE", 
+                 "TRAN_WINDOW_INTERCEPT", "TRAN_WINDOW_SLOPE")
+#Without SUM and 11-month but with TRAN
+feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_BEING_CUSTOMER", "ANTALL_12", "TRAN_12", "DELTA_ANTALL",
+                 "DELTA_TRAN", "ANTALL_INTERCEPT", "ANTALL_SLOPE", "TRAN_INTERCEPT", "TRAN_SLOPE",
+                 "ANTALL_WINDOW_INTERCEPT", "ANTALL_WINDOW_SLOPE", 
+                 "TRAN_WINDOW_INTERCEPT", "TRAN_WINDOW_SLOPE")
+
+feature_num <- c("ALDER", "DAYS_BEING_CUSTOMER", aName, tName, 
+                 "ANTALL_INTERCEPT", "ANTALL_SLOPE", "TRAN_INTERCEPT", "TRAN_SLOPE",
+                 "ANTALL_WINDOW_INTERCEPT", "ANTALL_WINDOW_SLOPE", 
+                 "TRAN_WINDOW_INTERCEPT", "TRAN_WINDOW_SLOPE")
+
+feature_num <- c("NUMBER_BK_KONTO_NR", "ALDER", "ANTALL_BARN", "DAYS_BEING_CUSTOMER", aName, tName, "TRAN_INTERCEPT", "TRAN_SLOPE",
+                 "ANTALL_INTERCEPT", "ANTALL_SLOPE")
+
+#MAin
+feature_num <- c("ALDER", "DAYS_BEING_CUSTOMER", aName, tName, 
+                 "ANTALL_INTERCEPT", "ANTALL_SLOPE")
+
+feature_num <- c("ALDER", "DAYS_BEING_CUSTOMER", aName, tName, 
+                 "TRAN_INTERCEPT", "TRAN_SLOPE", "ANTALL_INTERCEPT", "ANTALL_SLOPE")
+
+feature_num <- c("ALDER", "DAYS_BEING_CUSTOMER", aName, sName, "ANTALL_SLOPE")
+
+
 
 #feature_num <- c("ALDER", "ANTALL_BARN", "DAYS_START_DATO", aName[aName!="ANTALL_12"], sName[aName!="ANTALL_12"],"ANTALL_INTERCEPT", "ANTALL_SLOPE")
 
 #feature_chr <- c("BK_KJONN_KODE", "BK_SIVILSTAND_KODE", "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE", "IS_FIRM")
-feature_chr <- c("BK_KJONN_KODE", "BK_SIVILSTAND_KODE", "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE")
+feature_chr <- c("BK_KJONN_KODE", "BK_SIVILSTAND_KODE", "BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE", "BK_POSTSTED_KODE")
+feature_chr <- c("BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE")
+feature_chr <- c("BK_ANSVARSTED_KODE", "BK_GEOGRAFI_KODE", "BK_POSTSTED_KODE")
+#feature_chr <- c("BK_ANSVARSTED_KODE", "BK_POSTSTED_KODE")
 feature_nm <- c(feature_num, feature_chr)
 #feature_nm <- c("DAYS_START_DATO", "ALDER", "ANTALL_12", "ANTALL_1", "SUM_12", "BK_ANSVARSTED_KODE")
 label_nm <- "IS_OPEN"
@@ -248,23 +292,24 @@ dft <- df.test[feature_nm]
 tmp <- sapply(df.test[[label_nm]], function(x) as.numeric(levels(x))[x])
 dtest <- xgb.DMatrix(data = data.matrix(dft), label = tmp)
 
-#watchlist <- list(train=dtrain, test=dtest)
-watchlist <- list(train=dtrain)
+watchlist <- list(train=dtrain, test=dtest)
+#watchlist <- list(train=dtrain)
 
 # Training a XGBoost classifier
 param <- list(  objective           = "binary:logistic", #"reg:linear", 
                 scale_pos_weight = sumwneg / sumwpos, 
                 booster             = "gbtree", #Default - gbtree
-                eta                 = 0.1, #learning rate Default = 0.3
-                max_depth           = 30, #Default = 6
-                nthread             = 4, #number of cpu threads
-                subsample           = 0.7, #Default = 1 in otrder to avoid overfitting
+                eta                 = 0.05, #learning rate Default = 0.3
+                max_depth           = 70, #Default = 6
+                #nthread             = 4, #number of cpu threads, Deafult - max
+                subsample           = 0.6, #Default = 1 in order to avoid overfitting
                 colsample_bytree    = 0.8,
-                #seed = 48608,
+                max_delta_step      = 7, #Default =0, Maximum delta step we allow each tree’s weight estimation to be.
+                seed = 48608,
                 eval_metric         = "auc", #"ndcg" #"map" #"error" #"logloss" 
-                #min_child_weight    = 6,
+                #min_child_weight    = 6, # [default=1]
                 reg_alpha            = 1, #Default = 0 #L1
-                reg_lambda           = 0.1  #Default = 1 #L2
+                reg_lambda           = 0.99  #Default = 1 #L2
 )
 
 start_time <- Sys.time()
@@ -279,8 +324,16 @@ myModel <- xgb.train( params              = param,
 end_time <- Sys.time()
 cat("Training time:", format(end_time-start_time), "\n")
 
-label = getinfo(dtest, "label")
-pred.prob <- predict(myModel, dtest)
+#dcontrol <- dtest
+
+dft <- df_gtest[feature_nm]
+tmp <- sapply(df_gtest[[label_nm]], function(x) as.numeric(levels(x))[x])
+dcontrol <- xgb.DMatrix(data = data.matrix(dft), label = tmp)
+
+
+
+label = getinfo(dcontrol, "label")
+pred.prob <- predict(myModel, dcontrol)
 pred.label <- as.integer(pred.prob > 0.5)
 confusionMatrix(table(pred.label, label))
 #FormConfMatrix(pred.label, label)
@@ -301,8 +354,9 @@ xgb.plot.importance(importance_matrix = importance_matrix)
 require("pROC")
 
 # auc <- roc(label, pred.label)
-# print(auc)
-print(roc(label, pred.prob))
+auc <- roc(label, pred.prob)
+print(auc$auc)
+#print(roc(label, pred.prob))
 
 plot.roc(label, pred.prob, col = "blue", print.auc = TRUE, print.auc.col = "red", grid = TRUE)
 #plot.roc(label, pred.label, col = "blue", print.auc = TRUE, print.auc.col = "red", grid = TRUE)
@@ -316,6 +370,31 @@ plot.roc(label, pred.prob, col = "blue", print.auc = TRUE, print.auc.col = "red"
 #   geom_line(color = "blue", size = 1) +
 #   geom_abline(intercept = 0, slope = 1, color = "gray", size = 1) +
 #   theme_bw(base_size = 18)
+
+
+###################################################################################
+# Cross-validation
+###################################################################################
+start_time <- Sys.time()
+myModel <- xgb.cv( params              = param,
+                      data                = dtrain,
+                      nfold               = 5,
+                      metrics             = list("auc"),
+                      showsd              = TRUE,
+                      stratified = TRUE,
+                      nrounds             = 900, 
+                      verbose             = 1, 
+                      early_stopping_rounds    = 10,
+                      maximize            = TRUE
+)
+end_time <- Sys.time()
+cat("Training time:", format(end_time-start_time), "\n")
+
+#print(myModel)
+
+
+label = getinfo(dtest, "label")
+pred.prob <- predict(myModel, dtest)
 
 
 ####################################################################################
